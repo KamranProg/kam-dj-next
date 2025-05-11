@@ -1,0 +1,60 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+*.pyo
+*.pyd
+*.sqlite3
+.Python
+env/
+venv/
+ENV/
+*.env
+
+# Django
+*.log
+db.sqlite3
+media/
+staticfiles/
+local_settings.py
+
+# VSCode
+.vscode/
+.history/
+
+# macOS
+.DS_Store
+
+# Poetry virtualenvs (optional, just in case not in cache)
+*.venv/
+.venv/
+
+# Poetry environment file (Poetry mode)
+poetry.lock
+
+# Env config
+backend/.env
+
+# Tests and coverage
+htmlcov/
+.coverage
+coverage.xml
+*.cover
+.pytest_cache/
+nosetests.xml
+test-results.xml
+
+# Docker
+*.pid
+*.seed
+*.pid.lock
+
+# OS generated
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# cache
+__pycache__/
+*.py[cod]
