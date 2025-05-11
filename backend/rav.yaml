@@ -1,0 +1,5 @@
+scripts:
+  dev: poetry run python backend/manage.py runserver
+  migrate: poetry run python backend/manage.py migrate
+  shell: poetry run python backend/manage.py shell
+  superuser: poetry run python backend/manage.py createsuperuser
