@@ -1,5 +1,21 @@
 scripts:
   dev: poetry run python backend/manage.py runserver
-  migrate: poetry run python backend/manage.py migrate
   shell: poetry run python backend/manage.py shell
   superuser: poetry run python backend/manage.py createsuperuser
+
+  migrate: poetry run python backend/manage.py migrate
+  makemigrations: poetry run python backend/manage.py makemigrations
+  
+  reset-db: |
+    docker rm -f kbackend-db || true
+    docker run --name kbackend-db \
+      -e POSTGRES_USER=kamran \
+      -e POSTGRES_PASSWORD=supersecret \
+      -e POSTGRES_DB=kbackend_db \
+      -p 5432:5432 \
+      -d postgres:15
+
+  clean: |
+    find backend -path "*/migrations/*.py" -not -name "__init__.py" -delete
+    find backend -path "*/migrations/*.pyc" -delete
+    rm -f backend/db.sqlite3
