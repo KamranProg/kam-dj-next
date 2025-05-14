@@ -51,6 +51,9 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "dj_rest_auth",
     "dj_rest_auth.registration",
+    # Swagger UI
+    "drf_spectacular",
+    "drf_spectacular_sidecar", 
 ]
 
 MIDDLEWARE = [
@@ -156,5 +159,13 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
         "rest_framework.authentication.TokenAuthentication",
-    ]
+    ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "k-backend API",
+    "DESCRIPTION": "API documentation for k-backend",
+    "VERSION": "1.0.0",
 }
