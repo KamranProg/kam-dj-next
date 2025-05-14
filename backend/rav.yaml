@@ -1,5 +1,7 @@
 scripts:
-  dev: poetry run python backend/manage.py runserver
+  wait-for-db: poetry run python backend/manage.py wait_for_db
+
+  dev: poetry run python backend/manage.py wait_for_db && poetry run python backend/manage.py runserver
   shell: poetry run python backend/manage.py shell
   superuser: poetry run python backend/manage.py createsuperuser
 
@@ -21,4 +23,8 @@ scripts:
     rm -f backend/db.sqlite3
 
   health: curl http://localhost:8000/api/health/
+
+  test: poetry run python backend/manage.py test core
+
+
 
