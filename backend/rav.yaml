@@ -22,9 +22,19 @@ scripts:
     find backend -path "*/migrations/*.pyc" -delete
     rm -f backend/db.sqlite3
 
+  clean:pycache: |
+    find . -name "*.pyc" -delete
+    find . -name "__pycache__" -type d -exec rm -r {} +
+  
+  clean:migrate: |
+    rav run clean:pycache && \
+    rav run clean && \
+    rav run reset-db && \
+    rav run makemigrations && \
+    rav run migrate
+
   health: curl http://localhost:8000/api/health/
 
-  test: poetry run python backend/manage.py test core
-
+  test: poetry run pytest backend --ds=config.settings -v --tb=short -q
 
 

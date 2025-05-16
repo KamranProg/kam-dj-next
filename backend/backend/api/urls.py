@@ -4,7 +4,6 @@ from rest_framework.response import Response
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 
 
-
 class HealthCheckView(APIView):
     authentication_classes = []
     permission_classes = []

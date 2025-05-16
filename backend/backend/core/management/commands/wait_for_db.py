@@ -4,7 +4,10 @@ import psycopg2
 from psycopg2 import OperationalError
 from django.core.management.base import BaseCommand
 
+
 class Command(BaseCommand):
+    """Custom Django command that waits for the database to be ready."""
+    
     help = "Waits for the database to become available before running further commands."
 
     def handle(self, *args, **options):

@@ -53,7 +53,8 @@ INSTALLED_APPS = [
     "dj_rest_auth.registration",
     # Swagger UI
     "drf_spectacular",
-    "drf_spectacular_sidecar", 
+    "drf_spectacular_sidecar",
+    'accounts', 
 ]
 
 MIDDLEWARE = [
@@ -145,10 +146,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 SITE_ID = 1
 
-ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+AUTH_USER_MODEL = 'accounts.User'
 
+ACCOUNT_USERNAME_REQUIRED = True
+ACCOUNT_USER_MODEL_USERNAME_FIELD = "username"
 ACCOUNT_LOGIN_METHODS = {"email"}
-ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
+ACCOUNT_SIGNUP_FIELDS = ["email*", "username", "password1*", "password2*"]
+
 
 # You can set to True later if switching from session to token-based auth
 REST_USE_JWT = False
@@ -169,3 +173,8 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "API documentation for k-backend",
     "VERSION": "1.0.0",
 }
+
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+)
