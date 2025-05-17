@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
+from .views import get_csrf_token
 
 
 class HealthCheckView(APIView):
@@ -15,6 +16,8 @@ urlpatterns = [
     path("health/", HealthCheckView.as_view(), name="health"),
     path("auth/", include("dj_rest_auth.urls")),
     path("auth/registration/", include("dj_rest_auth.registration.urls")),
+    # CSRF token endpoint
+    path("auth/csrf/", get_csrf_token, name="get_csrf_token"),
     # Schema + Swagger UI
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
     path("docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),

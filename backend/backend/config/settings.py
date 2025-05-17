@@ -55,9 +55,12 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "drf_spectacular_sidecar",
     'accounts', 
+    # CORS
+    "corsheaders",
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -158,6 +161,26 @@ ACCOUNT_SIGNUP_FIELDS = ["email*", "username", "password1*", "password2*"]
 REST_USE_JWT = False
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+# Enable secure cookie behavior
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = "Lax"  # or "Strict"
+SESSION_COOKIE_SAMESITE = "Lax"
+
+# Allow credentials (important for cookies from frontend)
+CORS_ALLOW_CREDENTIALS = True
+
+# Allow your frontend host(s)
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # Next.js local dev
+    "https://your-app.vercel.app",  # your deployed frontend
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    # "https://your-app.vercel.app",
+]
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
