@@ -1,81 +1,123 @@
 "use client";
 
-import { z } from "zod";
+import { useTransition } from "react";
 import { zodValidator } from "@tanstack/zod-form-adapter";
 import Link from "next/link";
-
-import {
-Card,
-CardHeader,
-CardTitle,
-CardContent,
-CardFooter,
-} from "@/components/ui/card";
-import { SocialLoginButtons } from "../social-login-buttons";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { useAppForm } from "@/components/form";
+import { useAuth } from "@/context/auth-context";
+import type { ApiResponseStatus } from "@/types/api";
+import { loginSchema, type LoginFormBody, type LoginFormValues } from "./schema";
+import { SocialLoginButtons } from "../social-login-buttons";
 
-export const loginSchema = z.object({
-email: z.string().email("Invalid email address"),
-password: z.string().min(6, "Password must be at least 6 characters"),
-});
+async function loginViaProxy(values: LoginFormValues): Promise<ApiResponseStatus> {
+  const formBody: LoginFormBody = {
+    ...values,
+    username: values.email,
+  };
+  try {
+    const res = await fetch("/api/proxy/auth/login", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(formBody),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      return {
+        status: "error",
+        message: data.message || "Login failed",
+      };
+    }
+
+    return {
+      status: "success",
+      message: data.message || "Logged in successfully!",
+    };
+  } catch (error) {
+    console.error("Login error:", error);
+    return {
+      status: "error",
+      message: "Login failed. Please try again.",
+    };
+  }
+}
 
 export function LoginForm() {
-const form = useAppForm({
-defaultValues: {
-email: "",
-password: "",
-},
-validatorAdapter: zodValidator,
-validators: {
-onSubmit: loginSchema,
-onChange: loginSchema,
-},
-onSubmit: async ({ value }) => {
-console.log("Login submit", value);
-},
-});
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+  const { refreshUser } = useAuth();
 
-return (
-<Card className="max-w-sm mx-auto mt-12">
-    <CardHeader>
+  const form = useAppForm({
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+    validatorAdapter: zodValidator,
+    validators: {
+      onSubmit: loginSchema,
+      onChange: loginSchema,
+    },
+    onSubmit: ({ value }) => {
+      startTransition(async () => {
+        const result = await loginViaProxy(value);
+
+        if (result.status === "error") {
+          toast.error(result.message);
+          return;
+        }
+
+        await refreshUser();
+        toast.success(result.message);
+        form.reset();
+        router.push("/dashboard");
+      });
+    },
+  });
+
+  return (
+    <Card className="max-w-sm mx-auto mt-12">
+      <CardHeader>
         <CardTitle className="text-xl">Login</CardTitle>
-    </CardHeader>
-    <CardContent>
-        <form onSubmit={form.handleSubmit} className="space-y-4">
-            <form.AppField name="email">
-                {(field) => (<div>
-                    <field.TextField label="Email" type="email" />
-                </div>)}
-            </form.AppField>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={(e) => { e.preventDefault(); form.handleSubmit(e); }} className="space-y-4">
+          <form.AppField name="email">
+            {(field) => <field.TextField label="Email" type="email" />}
+          </form.AppField>
 
-            <form.AppField name="password">
-                {(field) => (<div>
-                    <field.TextField label="Password" type="password" />
-                </div>)}
-            </form.AppField>
+          <form.AppField name="password">
+            {(field) => <field.TextField label="Password" type="password" />}
+          </form.AppField>
 
-            <div className="text-right">
-                <Link href="/forgot-password" className="text-sm text-blue-600 hover:underline">
-                Forgot your password?
-                </Link>
-            </div>
+          <div className="text-right">
+            <Link href="/forgot-password" className="text-sm text-blue-600 hover:underline">
+              Forgot your password?
+            </Link>
+          </div>
 
-            <form.AppForm>
-                <form.SubmitButton>Sign in</form.SubmitButton>
-            </form.AppForm>
+          <form.AppForm>
+            <form.SubmitButton isLoading={isPending}>Sign in</form.SubmitButton>
+          </form.AppForm>
         </form>
-    </CardContent>
+      </CardContent>
 
-    <CardFooter className="flex flex-col gap-4">
+      <CardFooter className="flex flex-col gap-4">
         <div className="w-full border-t pt-4 text-center text-sm text-muted-foreground">OR</div>
         <SocialLoginButtons />
         <p className="text-sm text-center">
-            Don&apos;t have an account?{" "}
-            <Link href="/register" className="text-blue-600 hover:underline">
+          Don&apos;t have an account?{" "}
+          <Link href="/register" className="text-blue-600 hover:underline">
             Register
-            </Link>
+          </Link>
         </p>
-    </CardFooter>
-</Card>
-);
+      </CardFooter>
+    </Card>
+  );
 }

@@ -1,0 +1,32 @@
+import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
+
+export async function POST(req: Request) {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+  const csrfToken = cookieStore.get("csrftoken")?.value ?? "";
+
+  const body = await req.json();
+
+  const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/registration/`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      Cookie: cookieHeader,
+      "X-CSRFToken": csrfToken,
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data = await res.json().catch(() => ({}));
+
+  // Forward Set-Cookie headers from Django to the browser
+  const proxyRes = NextResponse.json(data, { status: res.status });
+  const setCookie = res.headers.get("set-cookie");
+  if (setCookie) {
+    proxyRes.headers.set("set-cookie", setCookie);
+  }
+
+  return proxyRes;
+}

@@ -1,90 +1,134 @@
 "use client";
 
-import { z } from "zod";
+import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { zodValidator } from "@tanstack/zod-form-adapter";
 import Link from "next/link";
-
-import {
-Card,
-CardHeader,
-CardTitle,
-CardContent,
-CardFooter,
-} from "@/components/ui/card";
-import { SocialLoginButtons } from "../social-login-buttons";
+import { toast } from "sonner";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { useAppForm } from "@/components/form";
+import { useAuth } from "@/context/auth-context";
+import type { ApiResponseStatus } from "@/types/api";
+import { registerSchema, type RegisterFormBody, type RegisterFormValues } from "./schema";
+import { SocialLoginButtons } from "../social-login-buttons";
 
+async function registerViaProxy(values: RegisterFormValues): Promise<ApiResponseStatus> {
+  const body: RegisterFormBody = {
+    ...values,
+    username: values.email,
+  };
 
-export const registerSchema = z
-.object({
-email: z.string().email("Invalid email address"),
-password: z.string().min(6, "Password must be at least 6 characters"),
-confirmPassword: z.string().min(6, "Confirm your password"),
-})
-.refine((data) => data.password === data.confirmPassword, {
-message: "Passwords do not match",
-path: ["confirmPassword"],
-});
+  try {
+    const res = await fetch("/api/proxy/auth/register", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      const errors = Object.entries(data)
+        .map(([key, val]) => `${key}: ${(val as string[]).join(", ")}`)
+        .join("\n");
+
+      return {
+        status: "error",
+        message: errors || "Registration failed",
+      };
+    }
+
+    return {
+      status: "success",
+      message: "Registered successfully!",
+    };
+  } catch (error) {
+    console.error("Registration error:", error);
+    return {
+      status: "error",
+      message: "Something went wrong.",
+    };
+  }
+}
 
 export function RegisterForm() {
-const form = useAppForm({
-defaultValues: {
-email: "",
-password: "",
-confirmPassword: "",
-},
-validatorAdapter: zodValidator,
-validators: {
-onSubmit: registerSchema,
-onChange: registerSchema,
-},
-onSubmit: async ({ value }) => {
-console.log("Registering", value);
-},
-});
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+  const { refreshUser } = useAuth();
 
-return (
-<Card className="max-w-sm mx-auto mt-12">
-    <CardHeader>
+  const form = useAppForm({
+    defaultValues: {
+      email: "",
+      password1: "",
+      password2: "",
+    },
+    validatorAdapter: zodValidator,
+    validators: {
+      onSubmit: registerSchema,
+      onChange: registerSchema,
+    },
+    onSubmit: ({ value }) => {
+      startTransition(async () => {
+        const result = await registerViaProxy(value);
+
+        if (result.status === "error") {
+          toast.error(result.message);
+          return;
+        }
+
+        await refreshUser();
+        toast.success(result.message);
+        form.reset();
+        router.push("/dashboard");
+      });
+    },
+  });
+
+  return (
+    <Card className="max-w-sm mx-auto mt-12">
+      <CardHeader>
         <CardTitle className="text-xl">Register</CardTitle>
-    </CardHeader>
-    <CardContent>
-        <form onSubmit={form.handleSubmit} className="space-y-4">
-            <form.AppField name="email">
-                {(field) => (<div>
-                    <field.TextField label="Email" type="email" />
-                </div>)}
-            </form.AppField>
+      </CardHeader>
 
-            <form.AppField name="password">
-                {(field) => (<div>
-                    <field.TextField label="Password" type="password" />
-                </div>)}
-            </form.AppField>
+      <CardContent>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            form.handleSubmit(e);
+          }}
+          className="space-y-4"
+        >
+          <form.AppField name="email">
+            {(field) => <field.TextField label="Email" type="email" />}
+          </form.AppField>
 
+          <form.AppField name="password1">
+            {(field) => <field.TextField label="Password" type="password" />}
+          </form.AppField>
 
-            <form.AppField name="confirmPassword">
-                {(field) => (<div>
-                    <field.TextField label="Confirm Password" type="password" />
-                </div>)}
-            </form.AppField>
+          <form.AppField name="password2">
+            {(field) => <field.TextField label="Confirm Password" type="password" />}
+          </form.AppField>
 
-            <form.AppForm>
-                <form.SubmitButton>Register</form.SubmitButton>
-            </form.AppForm>
+          <form.AppForm>
+            <form.SubmitButton isLoading={isPending}>Register</form.SubmitButton>
+          </form.AppForm>
         </form>
-    </CardContent>
+      </CardContent>
 
-    <CardFooter className="flex flex-col gap-4">
+      <CardFooter className="flex flex-col gap-4">
         <div className="w-full border-t pt-4 text-center text-sm text-muted-foreground">OR</div>
         <SocialLoginButtons />
         <p className="text-sm text-center">
-            Already have an account?{" "}
-            <Link href="/login" className="text-blue-600 hover:underline">
+          Already have an account?{" "}
+          <Link href="/login" className="text-blue-600 hover:underline">
             Sign in
-            </Link>
+          </Link>
         </p>
-    </CardFooter>
-</Card>
-);
+      </CardFooter>
+    </Card>
+  );
 }
