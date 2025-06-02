@@ -40,7 +40,7 @@ async function logoutViaProxy(): Promise<ApiResponseStatus> {
 export function LogoutButton() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const { refreshUser } = useAuth(); 
+  const { refreshUser } = useAuth();
 
   async function handleLogout() {
     const result = await logoutViaProxy();
@@ -61,11 +61,7 @@ export function LogoutButton() {
   }
 
   return (
-    <Button
-      variant="ghost"
-      onClick={handleLogout}
-      disabled={isPending}
-    >
+    <Button variant="ghost" onClick={handleLogout} disabled={isPending}>
       {isPending ? "Logging out..." : "Logout"}
     </Button>
   );

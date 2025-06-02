@@ -5,7 +5,7 @@ import { useFormContext } from ".";
 type SubmitButtonProps = {
   children: React.ReactNode;
   isPending?: boolean;
-};
+} & React.ButtonHTMLAttributes<HTMLButtonElement>;
 
 export const SubmitButton = ({ children, isPending }: SubmitButtonProps) => {
   const form = useFormContext();
@@ -14,7 +14,7 @@ export const SubmitButton = ({ children, isPending }: SubmitButtonProps) => {
     state.isSubmitting,
     state.isValid,
     state.isTouched,
-    state.canSubmit
+    state.canSubmit,
   ]);
 
   const isDisabled = isPending || isSubmitting || !isTouched || !isValid || !canSubmit;

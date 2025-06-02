@@ -1,7 +1,6 @@
 "use client";
 
 import { useTransition } from "react";
-import { zodValidator } from "@tanstack/zod-form-adapter";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -59,7 +58,6 @@ export function LoginForm() {
       email: "",
       password: "",
     },
-    validatorAdapter: zodValidator,
     validators: {
       onSubmit: loginSchema,
       onChange: loginSchema,
@@ -87,7 +85,13 @@ export function LoginForm() {
         <CardTitle className="text-xl">Login</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={(e) => { e.preventDefault(); form.handleSubmit(e); }} className="space-y-4">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            form.handleSubmit(e);
+          }}
+          className="space-y-4"
+        >
           <form.AppField name="email">
             {(field) => <field.TextField label="Email" type="email" />}
           </form.AppField>
@@ -103,7 +107,7 @@ export function LoginForm() {
           </div>
 
           <form.AppForm>
-            <form.SubmitButton isLoading={isPending}>Sign in</form.SubmitButton>
+            <form.SubmitButton isPending={isPending}>Sign in</form.SubmitButton>
           </form.AppForm>
         </form>
       </CardContent>

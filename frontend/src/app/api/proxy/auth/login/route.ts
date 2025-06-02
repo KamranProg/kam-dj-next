@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   const cookieStore = cookies();
   const cookieHeader = cookieStore.toString();
-  const csrfToken = cookieStore.get("csrftoken")?.value ?? "";
+  const csrfToken = (await cookieStore).get("csrftoken")?.value ?? "";
 
   const body = await req.json();
 
@@ -22,10 +22,9 @@ export async function POST(req: NextRequest) {
   const data = await res.json().catch(() => ({}));
 
   // Forward Set-Cookie headers from Django to the browser
-  const proxyRes = NextResponse.json(
-    data?.message ? { message: data.message } : data,
-    { status: res.status }
-  );
+  const proxyRes = NextResponse.json(data?.message ? { message: data.message } : data, {
+    status: res.status,
+  });
   const setCookie = res.headers.get("set-cookie");
   if (setCookie) {
     proxyRes.headers.set("set-cookie", setCookie);

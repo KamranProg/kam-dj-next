@@ -12,7 +12,7 @@ export async function getUserClient(): Promise<{
       console.warn("===== User fetch failed", res.status);
       return null;
     }
-    
+
     console.log("===== User fetch success", res.status);
     return await res.json();
   } catch (err) {

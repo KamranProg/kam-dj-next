@@ -2,7 +2,6 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { zodValidator } from "@tanstack/zod-form-adapter";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
@@ -65,7 +64,6 @@ export function RegisterForm() {
       password1: "",
       password2: "",
     },
-    validatorAdapter: zodValidator,
     validators: {
       onSubmit: registerSchema,
       onChange: registerSchema,
@@ -114,7 +112,7 @@ export function RegisterForm() {
           </form.AppField>
 
           <form.AppForm>
-            <form.SubmitButton isLoading={isPending}>Register</form.SubmitButton>
+            <form.SubmitButton isPending={isPending}>Register</form.SubmitButton>
           </form.AppForm>
         </form>
       </CardContent>
