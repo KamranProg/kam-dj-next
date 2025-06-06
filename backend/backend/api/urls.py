@@ -1,16 +1,27 @@
-from django.urls import path, include
-from rest_framework.views import APIView
+from collections.abc import Sequence
+
+from django.urls import include, path
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularRedocView,
+    SpectacularSwaggerView,
+)
+from rest_framework.authentication import BaseAuthentication
+from rest_framework.permissions import BasePermission
+from rest_framework.request import Request
 from rest_framework.response import Response
-from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
+from rest_framework.views import APIView
+
 from .views import get_csrf_token
 
 
 class HealthCheckView(APIView):
-    authentication_classes = []
-    permission_classes = []
+    authentication_classes: Sequence[type[BaseAuthentication]] = []
+    permission_classes: Sequence[type[BasePermission]] = []
 
-    def get(self, request):
+    def get(self, request: Request) -> Response:
         return Response({"status": "ok"})
+
 
 urlpatterns = [
     path("health/", HealthCheckView.as_view(), name="health"),
