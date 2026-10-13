@@ -23,6 +23,19 @@ Then open <http://localhost:3000> and sign in with the demo account:
 
 The API is at <http://localhost:8000> and its interactive docs at <http://localhost:8000/api/docs/>. Run `make help` to list every command.
 
+## Troubleshooting
+
+**`password authentication failed for user ...` when running `make dev`.** Another PostgreSQL on your machine (often one on port 5432) is answering instead of the Docker container. This usually means `backend/backend/.env` was created for an older setup: `make setup` never overwrites an existing `.env`. Replace it and recreate the database:
+
+```bash
+mv backend/backend/.env backend/backend/.env.old
+make setup
+make reset-db    # the old database volume has the old credentials
+make dev
+```
+
+The template uses `127.0.0.1` and port 5433 on purpose: `localhost` can resolve to IPv6 first and reach a different server than the container.
+
 ## Overview
 
 The project covers the part of an application that almost every product needs first: letting people register, sign in, stay signed in, and reach pages that only signed-in users can see. It uses **cookie-based sessions with CSRF protection**. No token is issued to the browser.

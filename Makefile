@@ -2,12 +2,12 @@ BACKEND_ENV := backend/backend/.env
 COMPOSE := docker compose --env-file $(BACKEND_ENV)
 
 .DEFAULT_GOAL := help
-.PHONY: help setup deps db migrate seed dev backend frontend test check lint down reset-db
+.PHONY: help setup deps env-check db migrate seed dev backend frontend test check lint down reset-db
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-10s %s\n", $$1, $$2}'
 
-setup: $(BACKEND_ENV) deps ## Create the backend .env and install both apps' dependencies
+setup: $(BACKEND_ENV) env-check deps ## Create the backend .env and install both apps' dependencies
 
 $(BACKEND_ENV):
 	cp backend/backend/.env.example $@
@@ -18,7 +18,16 @@ deps:
 	cd backend && uv sync
 	cd frontend && pnpm install --frozen-lockfile
 
-db: ## Start PostgreSQL in Docker and wait until it is ready
+env-check:
+	@if grep -qE '^(POSTGRES_PORT=5432|POSTGRES_DB=kbackend_db|POSTGRES_HOST=localhost)' $(BACKEND_ENV) 2>/dev/null; then \
+		echo ""; \
+		echo "WARNING: $(BACKEND_ENV) looks like it predates the current template"; \
+		echo "(port 5432, database kbackend_db or host 'localhost'). If migrations fail with"; \
+		echo "'password authentication failed', see Troubleshooting in the README."; \
+		echo ""; \
+	fi
+
+db: env-check ## Start PostgreSQL in Docker and wait until it is ready
 	$(COMPOSE) up -d --wait db
 
 migrate: ## Apply database migrations
