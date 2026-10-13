@@ -9,7 +9,7 @@ import { NextResponse, type NextRequest } from "next/server";
  * to pass its CSRF check over HTTPS.
  */
 export async function forwardToBackend(req: NextRequest, backendPath: string) {
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+  const backendUrl = process.env.BACKEND_URL ?? "http://localhost:8000";
 
   const upstream = await fetch(`${backendUrl}${backendPath}`, {
     method: "POST",
