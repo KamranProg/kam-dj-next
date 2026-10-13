@@ -27,11 +27,11 @@ class UserManager(BaseUserManager["User"]):
         password: The user's password.
         extra_fields: Additional fields to include when creating the user.
 
-        Raises:
-        ValueError: If email is not provided.
-
         Returns:
         User: The newly created user instance.
+
+        Raises:
+        ValueError: If email is not provided.
 
         """
         if not email:
@@ -61,11 +61,11 @@ class UserManager(BaseUserManager["User"]):
             password: The user's password.
             extra_fields: Additional fields to include when creating the superuser.
 
-        Raises:
-            ValueError: If is_staff or is_superuser is not set to True.
-
         Returns:
             User: The newly created superuser instance.
+
+        Raises:
+            ValueError: If is_staff or is_superuser is not set to True.
 
         """
         extra_fields.setdefault("is_staff", True)

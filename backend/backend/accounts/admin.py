@@ -8,10 +8,10 @@ from .models import User
 class UserAdmin(BaseUserAdmin):  # type: ignore[type-arg]
     """Admin configuration for the custom User model."""
 
-    ordering = ["email"]  # noqa: RUF012
+    ordering = ["email"]  # ruff: ignore[mutable-class-default]
 
-    list_display = ["email", "username", "is_staff", "is_active"]  # noqa: RUF012
-    search_fields = ["email", "username"]  # noqa: RUF012
+    list_display = ["email", "username", "is_staff", "is_active"]  # ruff: ignore[mutable-class-default]
+    search_fields = ["email", "username"]  # ruff: ignore[mutable-class-default]
 
     # Django expects these as instance attributes
     fieldsets = (
