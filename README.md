@@ -2,26 +2,44 @@
 
 A full-stack authentication starter: a **Django REST** API that owns users and sessions, and a **Next.js** app that provides the sign-up, login and protected-page UI on top of it.
 
-The two apps live in one repository and are developed together, but they run as separate processes and talk to each other over HTTP.
+The two apps live in one repository and run as separate processes. The browser only ever talks to the Next.js origin; Next.js talks to Django.
+
+## Quick start
+
+You need [uv](https://docs.astral.sh/uv/), Node.js 20.9+ with [pnpm](https://pnpm.io/) 10, Docker and `make` (see [Prerequisites](#prerequisites)).
+
+```bash
+git clone <repository-url> dj-next
+cd dj-next
+make setup   # install both apps, create backend/backend/.env with a generated SECRET_KEY
+make dev     # start Postgres, migrate, seed a demo user, run the API and the web app
+```
+
+Then open <http://localhost:3000> and sign in with the demo account:
+
+| Email | Password |
+|---|---|
+| `demo@example.com` | `DemoPass123!` |
+
+The API is at <http://localhost:8000> and its interactive docs at <http://localhost:8000/api/docs/>. Run `make help` to list every command.
 
 ## Overview
 
-The project covers the part of an application that almost every product needs first: letting people register, sign in, stay signed in, and reach pages that only signed-in users can see. It uses **cookie-based sessions with CSRF protection** rather than tokens kept in browser storage.
+The project covers the part of an application that almost every product needs first: letting people register, sign in, stay signed in, and reach pages that only signed-in users can see. It uses **cookie-based sessions with CSRF protection**. No token is issued to the browser.
 
-It is an early-stage foundation, not a finished product. There are no domain features yet beyond authentication (see [Project status](#project-status)).
+It is an early-stage foundation, not a finished product. There are no domain features beyond authentication (see [Project status](#project-status)).
 
 ## Technology stack
 
 | Area | Technology | Role |
 |---|---|---|
-| Backend | Django 5.2, Django REST Framework | API and user model |
+| Backend | Django 6.1, Django REST Framework | API and user model |
 | Backend | dj-rest-auth, django-allauth | Login, logout, registration, password endpoints |
 | Backend | drf-spectacular | OpenAPI schema, Swagger UI and ReDoc |
-| Backend | django-cors-headers | CORS with credentials for the frontend origin |
-| Backend | PostgreSQL 15 | Database |
-| Backend | Poetry, [rav](https://pypi.org/project/rav/) | Dependencies and project task runner |
+| Backend | PostgreSQL 17 (Docker Compose) | Database |
+| Backend | uv, [rav](https://pypi.org/project/rav/) | Dependencies and project task runner |
 | Backend | pytest, Ruff, mypy | Tests, linting/formatting, strict type checking |
-| Frontend | Next.js 15 (App Router), React 19, TypeScript | UI, routing, server-side proxy routes |
+| Frontend | Next.js 16 (App Router), React 19, TypeScript | UI, routing, server-side proxy routes |
 | Frontend | Tailwind CSS 4, shadcn/ui (Radix) | Styling and components |
 | Frontend | TanStack Form, Zod | Form handling and validation |
 | Frontend | pnpm, ESLint, Prettier | Dependencies and code quality |
@@ -31,21 +49,22 @@ It is an early-stage foundation, not a finished product. There are no domain fea
 Implemented:
 
 - Email-based registration, login and logout.
-- Session cookie authentication with CSRF protection (`HttpOnly`, `SameSite=Lax` cookies).
+- Session cookie authentication with CSRF protection (`HttpOnly`, `SameSite=Lax` cookies; `Secure` outside development).
+- No API tokens: login and registration return no credentials in the response body.
 - Custom `User` model with a UUID primary key and email as the login field.
-- Next.js proxy routes (`/api/proxy/auth/*`) that forward auth requests to Django, adding the CSRF header and passing the cookies back to the browser.
-- Route protection in Next.js middleware: `/dashboard` requires a session cookie, and signed-in users are redirected away from `/login` and `/register`.
-- Client-side auth context that loads the current user from `/api/auth/user/`.
-- Form validation with Zod (including password strength rules on registration).
+- Next.js proxy routes (`/api/proxy/auth/*`) that forward auth requests to Django, adding the CSRF header from the `HttpOnly` cookie and passing every cookie back to the browser.
+- Route protection in the Next.js proxy (`src/proxy.ts`): `/dashboard` requires a session cookie, and signed-in users are redirected away from `/login` and `/register`.
+- Client-side auth context that loads the current user from `/api/auth/user`, which Next.js rewrites to Django (same origin, no CORS).
+- Form validation with Zod, including password strength rules on registration.
 - Health check endpoint, OpenAPI schema, Swagger UI and ReDoc.
 - Django admin for the custom user model.
+- `seed_demo` management command that creates a demo user (refuses to run unless `DEBUG=True`).
 
 Present in the code but not usable yet:
 
 - Social login: the Google and Facebook buttons are placeholders that show an alert.
-- Password reset, password change and email verification endpoints come with dj-rest-auth and are exposed by the API, but the frontend has no pages for them. Email is sent to the console only.
+- Password reset, password change and email verification endpoints come with dj-rest-auth and are exposed by the API, but the frontend has no pages for them. Email is written to the console only.
 - A `UserProfile` model (avatar, bio) exists but is not exposed through the API.
-- The login form links to `/forgot-password`, and the navigation links to `/profile`. Neither page exists.
 
 ## Architecture
 
@@ -55,8 +74,9 @@ flowchart LR
 
     subgraph FE["frontend (Next.js, :3000)"]
         Pages["Pages and forms<br/>login, register, dashboard"]
-        MW["Middleware<br/>session cookie check"]
-        Proxy["Proxy routes<br/>/api/proxy/auth/*"]
+        Guard["Proxy guard<br/>session cookie check"]
+        Routes["Proxy routes<br/>/api/proxy/auth/*"]
+        Rewrite["Rewrite<br/>/api/auth/user"]
     end
 
     subgraph BE["backend (Django REST, :8000)"]
@@ -67,10 +87,11 @@ flowchart LR
 
     DB[("PostgreSQL")]
 
-    Browser --> MW --> Pages
-    Browser -->|"login, register, logout"| Proxy
-    Proxy -->|"adds CSRF header, forwards cookies"| API
-    Browser -->|"GET /api/auth/user/<br/>CORS with credentials"| API
+    Browser -->|"every request, one origin"| Guard --> Pages
+    Browser --> Routes
+    Browser --> Rewrite
+    Routes -->|"adds CSRF header, forwards cookies"| API
+    Rewrite --> API
     API --> DB
     Admin --> DB
 ```
@@ -78,131 +99,119 @@ flowchart LR
 How a login works:
 
 1. The browser submits the login form to `/api/proxy/auth/login` on the Next.js server.
-2. The proxy calls `POST /api/auth/login/` on Django, sending the `csrftoken` cookie value as `X-CSRFToken`.
-3. Django authenticates the user and replies with `sessionid` and `csrftoken` cookies, which the proxy passes on to the browser.
-4. Middleware sees the `sessionid` cookie and allows access to `/dashboard`. The client calls `/api/auth/user/` directly (cross-origin, with credentials) to load the user for the navigation bar.
+2. The proxy route calls `POST /api/auth/login/` on Django, copying the `csrftoken` cookie into the `X-CSRFToken` header (client code cannot read it because it is `HttpOnly`) and forwarding the `Origin` header.
+3. Django authenticates the user and replies with `sessionid` and `csrftoken` cookies, which the proxy route passes on to the browser.
+4. The proxy guard sees the `sessionid` cookie and allows access to `/dashboard`. The client then calls `/api/auth/user` (rewritten to Django) to load the user for the navigation bar.
 
 ## Project structure
 
 ```text
 .
-├── backend/                  Django project (Poetry)
+├── Makefile                  One-command setup and development (make help)
+├── docker-compose.yml        Local PostgreSQL
+├── backend/                  Django project (uv)
 │   ├── backend/              Django source root (manage.py)
 │   │   ├── config/           Settings, root URLs, ASGI/WSGI
-│   │   ├── accounts/         Custom User model, admin, service functions, tests
+│   │   ├── accounts/         Custom User model, admin, services, auth API tests
 │   │   ├── api/              URL routing, health check, CSRF endpoint
-│   │   ├── core/             wait_for_db management command
+│   │   ├── core/             wait_for_db and seed_demo management commands
 │   │   └── .env.example      Environment template
 │   ├── pyproject.toml        Dependencies and Ruff/mypy/pytest configuration
-│   └── rav.yaml              Task definitions (dev server, DB, lint, test)
+│   └── rav.yaml              Backend task definitions (dev server, lint, test)
 ├── frontend/                 Next.js app (pnpm)
 │   ├── src/app/              Routes: (auth) login/register, (private) dashboard,
 │   │                         (public) about, api/proxy/auth/* route handlers
 │   ├── src/components/       UI primitives, form components, nav bar, auth buttons
 │   ├── src/context/          Auth context (current user)
-│   ├── src/middleware.ts     Redirects based on the session cookie
+│   ├── src/lib/              Shared server-side proxy helper
+│   ├── src/proxy.ts          Redirects based on the session cookie
 │   └── .env.example          Environment template
-└── .github/workflows/        Frontend CI (lint, Prettier, type check)
+└── .github/                  CI workflows (frontend, backend) and Dependabot
 ```
 
 ## Prerequisites
 
-- Python 3.11 or newer and [Poetry](https://python-poetry.org/) 2.x
-- Node.js 20 or newer and [pnpm](https://pnpm.io/) 10
-- PostgreSQL 15. The simplest route is Docker, which the `reset-db` task uses; any other PostgreSQL instance works if you point the environment variables at it.
-
-Versions used while preparing this repository: Python 3.11.9, Poetry 2.1, Node.js 24, pnpm 10.28 and the `postgres:15` Docker image.
+- [uv](https://docs.astral.sh/uv/getting-started/installation/). It installs the pinned Python (3.13, see `backend/.python-version`; 3.12 or newer is required) for you.
+- Node.js 20.9 or newer (22 recommended, see `frontend/.nvmrc`) and [pnpm](https://pnpm.io/) 10. With Node installed, `corepack enable` provides the pnpm version pinned in `package.json`.
+- Docker with Compose, for the local PostgreSQL. Any other PostgreSQL works if you point the `POSTGRES_*` variables at it.
+- `make` (preinstalled on macOS and most Linux distributions; on Windows use WSL).
 
 ## Getting started
 
-Clone the repository (replace the URL with your own):
+### One command
+
+`make setup` and `make dev` (see [Quick start](#quick-start)). `make dev` runs the database, migrations, the demo-user seed, the API and the web app together; stop it with `Ctrl-C`, and `make down` stops the database container (data is kept).
+
+### Step by step
 
 ```bash
-git clone <repository-url> dj-next
-cd dj-next
+make setup      # dependencies and backend/backend/.env
+make db         # PostgreSQL on localhost:5433 (waits until healthy)
+make migrate
+make seed       # optional: demo@example.com
+make backend    # API on :8000, in one terminal
+make frontend   # web app on :3000, in another
 ```
 
-### 1. Backend
+### Without make
 
 ```bash
+# Backend
 cd backend
-poetry install --no-root
-cp backend/.env.example backend/.env
-```
+uv sync
+cp backend/.env.example backend/.env       # then set SECRET_KEY
+docker compose --env-file backend/.env -f ../docker-compose.yml up -d --wait db
+uv run python backend/manage.py migrate
+uv run python backend/manage.py runserver
 
-Edit `backend/.env` and set a real `SECRET_KEY`. You can generate one with:
-
-```bash
-poetry run python -c "from django.core.management.utils import get_random_secret_key as k; print(k())"
-```
-
-Start PostgreSQL, apply migrations and run the server:
-
-```bash
-poetry run rav run reset-db   # starts a postgres:15 container named kbackend-db on port 5432
-poetry run rav run migrate
-poetry run rav run dev        # waits for the database, then serves http://localhost:8000
-```
-
-`reset-db` removes any existing container named `kbackend-db` before creating a new one, and it uses the credentials from `.env.example`. If port 5432 is already taken by another PostgreSQL, use that instance instead and adjust the `POSTGRES_*` values in `.env`.
-
-Optionally create an admin user with `poetry run rav run superuser`.
-
-Check that the API is up: <http://localhost:8000/api/health/> should return `{"status":"ok"}`. Interactive docs are at <http://localhost:8000/api/docs/>.
-
-### 2. Frontend
-
-In a second terminal:
-
-```bash
+# Frontend (second terminal)
 cd frontend
 pnpm install
-cp .env.example .env.local
-pnpm dev                      # http://localhost:3000
+pnpm dev
 ```
 
-### Running everything
-
-Run the backend (step 1) and the frontend (step 2) side by side, then open <http://localhost:3000>. There is no single command that starts both.
+The frontend needs no `.env.local` for local development: it defaults to the API at `http://localhost:8000`.
 
 ## Environment variables
 
-**Backend**: `backend/backend/.env` (see [`.env.example`](backend/backend/.env.example))
+**Backend**: `backend/backend/.env` (created by `make setup`; see [`.env.example`](backend/backend/.env.example))
 
 | Variable | Description |
 |---|---|
-| `SECRET_KEY` | Django secret key. Required. |
+| `SECRET_KEY` | Django secret key. Required. `make setup` generates one. |
 | `DEBUG` | `True` for local development. Defaults to `False`. |
 | `ALLOWED_HOSTS` | Comma-separated host names. |
-| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Database credentials. Required. |
-| `POSTGRES_HOST`, `POSTGRES_PORT` | Database address. Required. |
+| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Database credentials. Required. Also used by `docker-compose.yml`. |
+| `POSTGRES_HOST`, `POSTGRES_PORT` | Database address. Required. The example uses port 5433 to avoid clashing with a PostgreSQL already on 5432. |
+| `CSRF_TRUSTED_ORIGINS` | Origin(s) the frontend is served from. Defaults to `http://localhost:3000`. |
+| `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE`, `SECURE_SSL_REDIRECT` | Default to on when `DEBUG` is off. |
+| `SECURE_HSTS_SECONDS` | Defaults to 3600 when `DEBUG` is off. Raise it once HTTPS works. |
+| `USE_X_FORWARDED_PROTO` | Set to `True` behind a TLS-terminating reverse proxy. |
+| `ADMIN_URL` | Admin path. Defaults to `admin/`. |
 | `DB_WAIT_RETRIES`, `DB_WAIT_DELAY` | Optional tuning for `wait_for_db` (defaults: 30 retries, 2 seconds). |
 
-**Frontend**: `frontend/.env.local` (see [`.env.example`](frontend/.env.example))
+**Frontend**: `frontend/.env.local` (optional; see [`.env.example`](frontend/.env.example))
 
 | Variable | Description |
 |---|---|
-| `NEXT_PUBLIC_BACKEND_URL` | Base URL of the Django API, e.g. `http://localhost:8000`. It is inlined at build time, so rebuild after changing it. |
+| `BACKEND_URL` | Base URL of the Django API. Server-side only; defaults to `http://localhost:8000`. The rewrite in `next.config.ts` is resolved at build time, so rebuild after changing it. |
 
-The CORS and CSRF allow-lists are currently hard-coded in `backend/backend/config/settings.py` (`http://localhost:3000`, plus a placeholder `https://your-app.vercel.app`). Update them for any other frontend origin.
+## Available commands
 
-## Available scripts
+**From the repository root:**
 
-**Backend** (from `backend/`, run as `poetry run rav run <task>`):
-
-| Task | What it does |
+| Command | What it does |
 |---|---|
-| `dev` | Waits for the database and starts the development server |
-| `migrate`, `makemigrations` | Apply or create migrations |
-| `test` | Run the pytest suite |
-| `lint`, `lint:fix` | Ruff checks (`lint:fix` also applies fixes) |
-| `format` | Ruff formatter |
-| `type-check` | mypy in strict mode |
-| `check` | `lint`, `type-check` and `test` in sequence |
-| `reset-db` | Recreate the local PostgreSQL container |
-| `health` | `curl` the health endpoint |
+| `make setup` | Install both apps and create the backend `.env` |
+| `make dev` | Database, migrations, demo user, API and web app |
+| `make db`, `make down`, `make reset-db` | Start, stop, or wipe and recreate the database |
+| `make migrate`, `make seed` | Apply migrations, create the demo user |
+| `make backend`, `make frontend` | Run one app only |
+| `make test` | Backend tests (starts the database if needed) |
+| `make lint` | Ruff, mypy, ESLint, Prettier and `tsc` |
+| `make check` | `lint` and `test` |
 
-See [`backend/rav.yaml`](backend/rav.yaml) for the full list of tasks.
+**Backend** (from `backend/`, as `uv run rav run <task>`): `dev`, `migrate`, `makemigrations`, `test`, `lint`, `lint:fix`, `format`, `type-check`, `check`, `seed`, `superuser`, `health`. See [`backend/rav.yaml`](backend/rav.yaml).
 
 **Frontend** (from `frontend/`):
 
@@ -210,34 +219,37 @@ See [`backend/rav.yaml`](backend/rav.yaml) for the full list of tasks.
 |---|---|
 | `pnpm dev` | Development server |
 | `pnpm build`, `pnpm start` | Production build and server |
-| `pnpm lint` | ESLint (`next lint`) |
+| `pnpm lint` | ESLint |
 | `pnpm type-check` | `tsc --noEmit` |
 | `pnpm format` | Prettier, writing changes |
 
 ## Testing and verification
 
-Backend tests need a running PostgreSQL, because pytest-django creates a temporary test database. With the database from the steps above running:
-
 ```bash
-cd backend
-poetry run rav run check
+make check
 ```
 
-This runs Ruff, mypy and the pytest suite (10 tests covering the user model, the service functions, the admin and the `wait_for_db` command).
+This runs Ruff, mypy, the backend test suite (23 tests: user model, service functions, admin, auth endpoints, health/CSRF endpoints, OpenAPI schema generation, management commands), ESLint, Prettier and the TypeScript compiler.
 
-The frontend has no automated tests. Its checks are:
+The frontend has no automated tests.
 
-```bash
-cd frontend
-pnpm lint
-pnpm exec prettier --check .
-pnpm type-check
-pnpm build
-```
+GitHub Actions runs both sets of checks on pushes and pull requests to `main` (`.github/workflows/`): the frontend job also builds the app, and the backend job runs against a PostgreSQL service and checks for missing migrations. Dependabot proposes weekly updates for npm, uv, GitHub Actions and Docker Compose. The workflows have been exercised locally, but have not yet run on GitHub.
 
-The GitHub Actions workflow in `.github/workflows/frontend-ci.yml` runs lint, the Prettier check and the type check for changes under `frontend/`. There is no backend CI workflow yet.
+## Security notes
 
-While preparing this repository, all of the commands above passed locally, and registration, login and the protected dashboard were exercised end to end through the Next.js proxy against a real Django and PostgreSQL instance.
+In place:
+
+- Session cookies are `HttpOnly` and `SameSite=Lax`; with `DEBUG=False` they are also `Secure`, HTTPS redirect and HSTS are enabled, and `manage.py check --deploy` reports only the optional HSTS subdomain/preload settings.
+- CSRF protection is enforced for authenticated writes; the CSRF cookie is `HttpOnly` and handled server-side by the Next.js proxy routes.
+- No API tokens are issued, and the dashboard does not expose the session cookie.
+- The browser never calls Django cross-origin, so no CORS configuration is needed.
+- Dependency audits: `pnpm audit --prod` and `pip-audit` report no known vulnerabilities at the time of writing. `pnpm audit` reports one advisory in a development-only lint dependency (`braces`) for which no patched release exists yet.
+
+Not yet in place:
+
+- **Rate limiting.** Login and registration are not throttled. Doing this correctly behind the Next.js proxy requires forwarding client IPs (`X-Forwarded-For`) and configuring DRF's `NUM_PROXIES`, so it is left as a follow-up.
+- Email verification and password reset flows are not wired up in the UI.
+- The Swagger and ReDoc pages are public. Restrict them in production if the API surface should not be advertised.
 
 ## Project status
 
@@ -245,12 +257,9 @@ Early-stage prototype. The authentication flow works end to end, but the project
 
 Known limitations:
 
-- No frontend tests, and no backend tests for the API endpoints themselves.
+- No frontend tests, and no browser end-to-end tests.
 - Social login, password reset pages and a profile page are not implemented (see [Features](#features)).
-- The dashboard page prints the raw session cookie value. This is a development aid and should be removed before real use.
-- The default page title is still "Create Next App", and `get-user-client.ts` contains debug `console.log` calls.
-- Settings are development-oriented: console email backend, hard-coded CORS origins, no media or static file configuration, and no deployment setup.
-- django-allauth reports a deprecation warning for `ACCOUNT_USERNAME_REQUIRED`.
+- Settings are development-oriented beyond the security defaults above: console email backend (Django 6.1 deprecates `EMAIL_BACKEND` in favour of `MAILERS`, removal planned for Django 2028), no media or static file configuration, and no deployment setup.
 
 ## License
 
