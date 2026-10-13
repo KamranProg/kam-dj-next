@@ -1,0 +1,70 @@
+name: Backend CI
+
+on:
+  push:
+    branches: ["main"]
+    paths: ["backend/**", ".github/workflows/backend-ci.yml"]
+  pull_request:
+    branches: ["main"]
+    paths: ["backend/**", ".github/workflows/backend-ci.yml"]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: djnext
+          POSTGRES_USER: djnext
+          POSTGRES_PASSWORD: djnext
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U djnext -d djnext"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      SECRET_KEY: ci-only-secret-key-not-used-anywhere-else
+      DEBUG: "True"
+      ALLOWED_HOSTS: localhost
+      POSTGRES_DB: djnext
+      POSTGRES_USER: djnext
+      POSTGRES_PASSWORD: djnext
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.3.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Ruff lint
+        run: uv run ruff check backend --no-fix
+
+      - name: Ruff format check
+        run: uv run ruff format backend --check
+
+      - name: Type check
+        run: uv run mypy backend
+
+      - name: Check for missing migrations
+        run: uv run python backend/manage.py makemigrations --check --dry-run
+
+      - name: Test
+        run: uv run pytest backend --ds=config.settings -q
