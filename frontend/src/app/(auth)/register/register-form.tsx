@@ -9,7 +9,7 @@ import { useAppForm } from "@/components/form";
 import { useAuth } from "@/context/auth-context";
 import type { ApiResponseStatus } from "@/types/api";
 import { registerSchema, type RegisterFormBody, type RegisterFormValues } from "./schema";
-import { SocialLoginButtons } from "../social-login-buttons";
+import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 
 async function registerViaProxy(values: RegisterFormValues): Promise<ApiResponseStatus> {
   const body: RegisterFormBody = {

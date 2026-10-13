@@ -9,7 +9,7 @@ import { useAppForm } from "@/components/form";
 import { useAuth } from "@/context/auth-context";
 import type { ApiResponseStatus } from "@/types/api";
 import { loginSchema, type LoginFormBody, type LoginFormValues } from "./schema";
-import { SocialLoginButtons } from "../social-login-buttons";
+import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 
 async function loginViaProxy(values: LoginFormValues): Promise<ApiResponseStatus> {
   const formBody: LoginFormBody = {
