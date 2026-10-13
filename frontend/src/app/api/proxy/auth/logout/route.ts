@@ -1,15 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { forwardToBackend } from "@/lib/backend-proxy";
 
-export async function POST(req: NextRequest) {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/logout/`, {
-    method: "POST",
-    headers: {
-      cookie: req.headers.get("cookie") || "",
-      "Content-Type": "application/json",
-      "X-CSRFToken": req.cookies.get("csrftoken")?.value || "",
-    },
-    credentials: "include",
-  });
-
-  return new NextResponse(null, { status: res.status });
+export function POST(req: NextRequest) {
+  return forwardToBackend(req, "/api/auth/logout/");
 }
