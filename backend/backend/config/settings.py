@@ -51,7 +51,6 @@ INSTALLED_APPS = [
     "allauth.socialaccount",
     # REST auth
     "rest_framework",
-    "rest_framework.authtoken",
     "dj_rest_auth",
     "dj_rest_auth.registration",
     # Swagger UI
@@ -159,8 +158,12 @@ ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "username", "password1*", "password2*"]
 
 
-# You can set to True later if switching from session to token-based auth
-REST_USE_JWT = False
+# Session-cookie authentication only: no API tokens are issued or returned.
+REST_AUTH = {
+    "SESSION_LOGIN": True,
+    "USE_JWT": False,
+    "TOKEN_MODEL": None,
+}
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
@@ -187,7 +190,6 @@ CSRF_TRUSTED_ORIGINS = [
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
-        "rest_framework.authentication.TokenAuthentication",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
