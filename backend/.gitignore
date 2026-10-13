@@ -30,9 +30,6 @@ local_settings.py
 *.venv/
 .venv/
 
-# Poetry environment file (Poetry mode)
-poetry.lock
-
 # Env config
 backend/.env
 
