@@ -154,7 +154,6 @@ SITE_ID = 1
 
 AUTH_USER_MODEL = "accounts.User"
 
-ACCOUNT_USERNAME_REQUIRED = True
 ACCOUNT_USER_MODEL_USERNAME_FIELD = "username"
 ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "username", "password1*", "password2*"]
