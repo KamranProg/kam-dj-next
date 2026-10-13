@@ -14,7 +14,6 @@ dependencies = [
     "requests>=2.32",
     "drf-spectacular[sidecar]>=0.28",
     "pillow>=11.2",
-    "django-cors-headers>=4.7",
 ]
 
 [dependency-groups]
