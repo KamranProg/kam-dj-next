@@ -1,24 +1,14 @@
 from .models import User
 
 
-def create_user(
-    email: str,
-    password: str,
-    first_name: str = "",
-    last_name: str = "",
-) -> User:
+def create_user(email: str, password: str) -> User:
     """Create a new user with the given details.
 
     Returns:
         User: The created user instance.
 
     """
-    return User.objects.create_user(
-        email=email,
-        password=password,
-        first_name=first_name,
-        last_name=last_name,
-    )
+    return User.objects.create_user(email=email, password=password)
 
 
 # Can be useful when I introduce email verification scenarios
