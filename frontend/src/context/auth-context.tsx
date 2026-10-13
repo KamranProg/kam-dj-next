@@ -28,7 +28,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    fetchUser().finally(() => setLoading(false));
+    let active = true;
+    getUserClient()
+      .then((fetched) => {
+        if (active) setUser(fetched);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   return (

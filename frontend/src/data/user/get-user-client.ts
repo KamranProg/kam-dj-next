@@ -4,19 +4,15 @@ export async function getUserClient(): Promise<{
   username?: string;
 } | null> {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/user/`, {
+    // Same-origin request; next.config.ts rewrites it to the Django API.
+    // A timeout keeps the nav bar from waiting forever if the API is slow or down.
+    const res = await fetch("/api/auth/user", {
       credentials: "include",
+      signal: AbortSignal.timeout(8000),
     });
-
-    if (!res.ok) {
-      console.warn("===== User fetch failed", res.status);
-      return null;
-    }
-
-    console.log("===== User fetch success", res.status);
+    if (!res.ok) return null;
     return await res.json();
-  } catch (err) {
-    console.error("===== User fetch exception:", err);
+  } catch {
     return null;
   }
 }

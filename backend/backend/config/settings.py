@@ -51,19 +51,15 @@ INSTALLED_APPS = [
     "allauth.socialaccount",
     # REST auth
     "rest_framework",
-    "rest_framework.authtoken",
     "dj_rest_auth",
     "dj_rest_auth.registration",
     # Swagger UI
     "drf_spectacular",
     "drf_spectacular_sidecar",
     "accounts",
-    # CORS
-    "corsheaders",
 ]
 
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -154,14 +150,18 @@ SITE_ID = 1
 
 AUTH_USER_MODEL = "accounts.User"
 
-ACCOUNT_USERNAME_REQUIRED = True
 ACCOUNT_USER_MODEL_USERNAME_FIELD = "username"
 ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "username", "password1*", "password2*"]
 
 
-# You can set to True later if switching from session to token-based auth
-REST_USE_JWT = False
+# Session-cookie authentication only: no API tokens are issued or returned.
+REST_AUTH = {
+    "SESSION_LOGIN": True,
+    "USE_JWT": False,
+    "TOKEN_MODEL": None,
+    "TOKEN_SERIALIZER": "accounts.serializers.NoTokenSerializer",
+}
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
@@ -171,24 +171,29 @@ CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = "Lax"  # or "Strict"
 SESSION_COOKIE_SAMESITE = "Lax"
 
-# Allow credentials (important for cookies from frontend)
-CORS_ALLOW_CREDENTIALS = True
+# The browser only talks to the Next.js origin, which proxies API calls to
+# Django, so no CORS configuration is needed. Django still checks the Origin
+# header on unsafe requests, so list the frontend origin(s) here.
+CSRF_TRUSTED_ORIGINS = env.list(
+    "CSRF_TRUSTED_ORIGINS", default=["http://localhost:3000"]
+)
 
-# Allow your frontend host(s)
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # Next.js local dev
-    "https://your-app.vercel.app",  # your deployed frontend
-]
+# Transport security: enabled by default whenever DEBUG is off.
+SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=not DEBUG)
+CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=not DEBUG)
+SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=not DEBUG)
+# Start small: browsers remember HSTS for this long. Raise it once HTTPS works.
+SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=0 if DEBUG else 3600)
+if env.bool("USE_X_FORWARDED_PROTO", default=False):
+    # Set when a TLS-terminating reverse proxy sits in front of Django.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000",
-    # "https://your-app.vercel.app",
-]
+# Move the admin off its well-known path in production if desired.
+ADMIN_URL = env("ADMIN_URL", default="admin/")
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
-        "rest_framework.authentication.TokenAuthentication",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
