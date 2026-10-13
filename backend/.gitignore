@@ -55,3 +55,7 @@ Desktop.ini
 # cache
 __pycache__/
 *.py[cod]
+
+# Local env backups and variants (the template is .env.example)
+.env.*
+!.env.example
