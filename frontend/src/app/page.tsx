@@ -1,6 +1,3 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-
 export default function Home() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-10">
@@ -9,14 +6,6 @@ export default function Home() {
         A Next.js frontend talking to a Django REST API with cookie-based sessions and CSRF
         protection. Create an account or sign in to reach the protected dashboard.
       </p>
-      <div className="mt-6 flex gap-3">
-        <Button asChild>
-          <Link href="/register">Sign up</Link>
-        </Button>
-        <Button asChild variant="outline">
-          <Link href="/login">Log in</Link>
-        </Button>
-      </div>
     </div>
   );
 }
