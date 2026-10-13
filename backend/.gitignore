@@ -26,7 +26,7 @@ local_settings.py
 # macOS
 .DS_Store
 
-# Poetry virtualenvs (optional, just in case not in cache)
+# Virtual environments
 *.venv/
 .venv/
 

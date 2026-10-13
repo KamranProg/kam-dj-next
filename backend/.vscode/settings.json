@@ -1,5 +1,5 @@
 {
-  "python.defaultInterpreterPath": "~/Library/Caches/pypoetry/virtualenvs/k-backend-CTB97Pz5-py3.11/bin/python",
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
   "python.linting.enabled": true,
   "python.linting.mypyEnabled": true,
   "python.linting.ruffEnabled": true,
@@ -7,7 +7,7 @@
   "python.linting.ruffArgs": ["check", "backend"],
   "ruff.enable": true,
   "ruff.configPath": "pyproject.toml",
-  "mypy.dmypyExecutable": "~/Library/Caches/pypoetry/virtualenvs/k-backend-CTB97Pz5-py3.11/bin/dmypy",
+  "mypy.dmypyExecutable": "${workspaceFolder}/.venv/bin/dmypy",
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
     "source.fixAll": true
