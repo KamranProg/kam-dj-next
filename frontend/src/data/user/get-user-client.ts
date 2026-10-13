@@ -5,7 +5,11 @@ export async function getUserClient(): Promise<{
 } | null> {
   try {
     // Same-origin request; next.config.ts rewrites it to the Django API.
-    const res = await fetch("/api/auth/user", { credentials: "include" });
+    // A timeout keeps the nav bar from waiting forever if the API is slow or down.
+    const res = await fetch("/api/auth/user", {
+      credentials: "include",
+      signal: AbortSignal.timeout(8000),
+    });
     if (!res.ok) return null;
     return await res.json();
   } catch {

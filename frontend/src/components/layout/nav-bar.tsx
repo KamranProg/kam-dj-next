@@ -32,7 +32,10 @@ export function NavBar() {
       {/* Bottom or right: Auth section */}
       <div className="flex justify-end sm:justify-end items-center gap-4 text-sm">
         {loading ? (
-          <span className="text-muted-foreground">...</span>
+          <div className="flex gap-2" aria-label="Checking your session" role="status">
+            <span className="h-8 w-16 animate-pulse rounded-md bg-muted" />
+            <span className="h-8 w-20 animate-pulse rounded-md bg-muted" />
+          </div>
         ) : isLoggedIn && user ? (
           <>
             <span className="text-muted-foreground">{user.username ?? user.email}</span>
