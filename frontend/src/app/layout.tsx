@@ -27,7 +27,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <AuthProvider>
           <NavBar />
           {children}
-          <Toaster position="top-right" richColors />
+          <Toaster position="bottom-right" richColors />
         </AuthProvider>
       </body>
     </html>
