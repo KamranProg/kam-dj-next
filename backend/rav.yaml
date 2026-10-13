@@ -1,0 +1,59 @@
+scripts:
+  # ──── Dev Server ──────────────────────────────
+  dev: |
+    rav run wait-for-db
+    poetry run python backend/manage.py runserver
+
+  wait-for-db: poetry run python backend/manage.py wait_for_db
+  shell: poetry run python backend/manage.py shell
+  superuser: poetry run python backend/manage.py createsuperuser
+
+  # ──── DB Management ──────────────────────────
+  migrate: poetry run python backend/manage.py migrate
+  makemigrations: poetry run python backend/manage.py makemigrations
+
+  reset-db: |
+    docker rm -f kbackend-db || true
+    docker run --name kbackend-db \
+      -e POSTGRES_USER=kamran \
+      -e POSTGRES_PASSWORD=supersecret \
+      -e POSTGRES_DB=kbackend_db \
+      -p 5432:5432 \
+      -d postgres:15
+
+  clean:migrations: |
+    find backend -path "*/migrations/*.py" -not -name "__init__.py" -delete
+    find backend -path "*/migrations/*.pyc" -delete
+    rm -f backend/db.sqlite3
+
+  clean:pycache: |
+    find . -name "*.pyc" -delete
+    find . -name "__pycache__" -type d -exec rm -r {} +
+
+  clean:all: |
+    rav run clean:pycache
+    rav run clean:migrations
+
+  reset:all: |
+    rav run clean:all
+    rav run reset-db
+    rav run makemigrations
+    rav run migrate
+
+  # ──── Health Check ───────────────────────────
+  health: curl http://localhost:8000/api/health/
+
+  # ──── Tests ──────────────────────────────────
+  test: poetry run pytest backend --ds=config.settings -v --tb=short -q
+
+  # ──── Code Quality ───────────────────────────
+  lint: poetry run ruff check backend
+  lint:fix: poetry run ruff check backend --fix
+  lint:fix:unsafe: poetry run ruff check backend --fix --unsafe-fixes
+  format: poetry run ruff format backend
+  type-check: poetry run mypy backend
+
+  check: |
+    rav run lint
+    rav run type-check
+    rav run test
