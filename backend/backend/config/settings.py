@@ -163,6 +163,7 @@ REST_AUTH = {
     "SESSION_LOGIN": True,
     "USE_JWT": False,
     "TOKEN_MODEL": None,
+    "TOKEN_SERIALIZER": "accounts.serializers.NoTokenSerializer",
 }
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
