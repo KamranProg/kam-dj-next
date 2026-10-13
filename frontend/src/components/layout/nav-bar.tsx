@@ -35,9 +35,7 @@ export function NavBar() {
           <span className="text-muted-foreground">...</span>
         ) : isLoggedIn && user ? (
           <>
-            <Link href="/profile" className="hover:underline">
-              {user.username ?? user.email}
-            </Link>
+            <span className="text-muted-foreground">{user.username ?? user.email}</span>
             <LogoutButton />
           </>
         ) : (

@@ -100,12 +100,6 @@ export function LoginForm() {
             {(field) => <field.TextField label="Password" type="password" />}
           </form.AppField>
 
-          <div className="text-right">
-            <Link href="/forgot-password" className="text-sm text-blue-600 hover:underline">
-              Forgot your password?
-            </Link>
-          </div>
-
           <form.AppForm>
             <form.SubmitButton isPending={isPending}>Sign in</form.SubmitButton>
           </form.AppForm>
