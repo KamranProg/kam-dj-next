@@ -7,19 +7,16 @@ scripts:
   wait-for-db: uv run python backend/manage.py wait_for_db
   shell: uv run python backend/manage.py shell
   superuser: uv run python backend/manage.py createsuperuser
+  seed: uv run python backend/manage.py seed_demo
 
   # ──── DB Management ──────────────────────────
   migrate: uv run python backend/manage.py migrate
   makemigrations: uv run python backend/manage.py makemigrations
 
+  # Recreates the compose database (drops its data).
   reset-db: |
-    docker rm -f kbackend-db || true
-    docker run --name kbackend-db \
-      -e POSTGRES_USER=kamran \
-      -e POSTGRES_PASSWORD=supersecret \
-      -e POSTGRES_DB=kbackend_db \
-      -p 5432:5432 \
-      -d postgres:15
+    docker compose --env-file backend/.env -f ../docker-compose.yml down -v
+    docker compose --env-file backend/.env -f ../docker-compose.yml up -d --wait db
 
   clean:migrations: |
     find backend -path "*/migrations/*.py" -not -name "__init__.py" -delete
